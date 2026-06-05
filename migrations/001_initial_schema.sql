@@ -7,15 +7,6 @@
 --   mysql -u root -p bookbridge < migrations/001_initial_schema.sql
 
 -- ============================================================
--- Create database (if not exists)
--- ============================================================
-CREATE DATABASE IF NOT EXISTS bookbridge
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE bookbridge;
-
--- ============================================================
 -- 1. User
 -- Base entity from ER diagram + Google OAuth fields + RBAC
 -- Removed: password (Google OAuth only)

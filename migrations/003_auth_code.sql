@@ -3,7 +3,7 @@
 -- Adds AuthCode table for secure OAuth token exchange
 -- ============================================================
 
-USE bookbridge;
+-- (USE bookbridge removed for managed DB compatibility)
 
 -- ============================================================
 -- 13. AuthCode — One-time OAuth exchange codes

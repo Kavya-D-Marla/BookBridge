@@ -3,7 +3,7 @@
 -- Adds RequestResponse table for Book Request Board responses
 -- ============================================================
 
-USE bookbridge;
+-- (USE bookbridge removed for managed DB compatibility)
 
 -- ============================================================
 -- 12. RequestResponse (NEW)
