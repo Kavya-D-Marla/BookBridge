@@ -39,6 +39,7 @@ async function runMigrations() {
     '002_phase4_additions.sql',
     '003_auth_code.sql',
     '004_notification_type.sql',
+    '005_frontend_alignment.sql',
   ];
 
   for (const file of files) {

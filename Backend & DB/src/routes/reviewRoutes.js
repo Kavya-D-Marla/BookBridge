@@ -49,14 +49,14 @@ router.post(
 
 /**
  * @route   GET /api/reviews/:id
- * @desc    Get a single review by ID
+ * @desc    Get all reviews for a user by ID
  * @access  Private
  */
 router.get(
   '/:id',
   validateIdParam('id'),
   handleValidationErrors,
-  reviewController.getReview
+  reviewController.getReviewsForUser
 );
 
 module.exports = router;

@@ -1,21 +1,12 @@
 /**
- * Request Routes
+ * Request Routes (Aligned with frontend Book Trade Negotiations)
  * Base path: /api/requests
- *
- * Note: specific sub-paths (/:id/respond) come AFTER /:id routes,
- * but before any would-be wildcard conflicts. Express matches first-declared wins.
  */
 
 const express = require('express');
-const requestController    = require('../controllers/requestController');
-const { verifyJWT, requireVerifiedSeller } = require('../middleware/auth');
-const {
-  validateIdParam,
-  handleValidationErrors,
-  validateCreateRequest,
-  validateRespondToRequest,
-  validatePagination,
-} = require('../middleware/validate');
+const requestController = require('../controllers/requestController');
+const { verifyJWT } = require('../middleware/auth');
+const { validateIdParam, handleValidationErrors } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -24,79 +15,25 @@ router.use(verifyJWT);
 
 /**
  * @route   GET /api/requests
- * @desc    List all book requests with optional filters and pagination
- * @query   q, category, semester, branch, status, page, limit
- * @access  Private
+ * @desc    Get all trade negotiations for current user
  */
-router.get(
-  '/',
-  validatePagination,
-  handleValidationErrors,
-  requestController.getRequests
-);
+router.get('/', requestController.getRequests);
 
 /**
  * @route   POST /api/requests
- * @desc    Create a new book request
- * @body    { title, author?, isbn?, category?, semester?, branch?, max_budget?, description? }
- * @access  Private
+ * @desc    Start a new book trade negotiation
  */
-router.post(
-  '/',
-  validateCreateRequest,
-  handleValidationErrors,
-  requestController.createRequest
-);
+router.post('/', requestController.createRequest);
 
 /**
- * @route   GET /api/requests/:id
- * @desc    Get a single book request with all seller responses
- * @access  Private
+ * @route   PATCH /api/requests/:id/status
+ * @desc    Accept or Decline a negotiation
  */
-router.get(
-  '/:id',
+router.patch(
+  '/:id/status',
   validateIdParam('id'),
   handleValidationErrors,
-  requestController.getRequestDetails
-);
-
-/**
- * @route   PUT /api/requests/:id
- * @desc    Update a book request (owner only)
- * @access  Private
- */
-router.put(
-  '/:id',
-  validateIdParam('id'),
-  handleValidationErrors,
-  requestController.updateRequest
-);
-
-/**
- * @route   DELETE /api/requests/:id
- * @desc    Delete a book request (owner only)
- * @access  Private
- */
-router.delete(
-  '/:id',
-  validateIdParam('id'),
-  handleValidationErrors,
-  requestController.deleteRequest
-);
-
-/**
- * @route   POST /api/requests/:id/respond
- * @desc    Seller responds to a book request
- * @body    { message: string, bookId?: number }
- * @access  Private (verified sellers only)
- */
-router.post(
-  '/:id/respond',
-  requireVerifiedSeller,
-  validateIdParam('id'),
-  validateRespondToRequest,
-  handleValidationErrors,
-  requestController.respondToRequest
+  requestController.updateRequestStatus
 );
 
 module.exports = router;

@@ -31,8 +31,6 @@ router.use(verifyJWT);
  */
 router.post(
   '/',
-  validateCreateNegotiation,
-  handleValidationErrors,
   negotiationController.createNegotiation
 );
 

@@ -1,15 +1,12 @@
 /**
  * Wishlist Controller
- * HTTP handlers for wishlist endpoints.
+ * Aligned with frontend response formats
  */
 
 const wishlistService = require('../services/wishlistService');
-const { success }     = require('../utils/responseHelper');
 
 /**
  * Add a book to the wishlist
- * @route POST /api/wishlist
- * @access Private
  */
 const addToWishlist = async (req, res, next) => {
   try {
@@ -17,7 +14,13 @@ const addToWishlist = async (req, res, next) => {
     const { bookId } = req.body;
 
     const entry = await wishlistService.addToWishlist(userId, bookId);
-    return success(res, 'Book added to wishlist', { entry }, 201);
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Book added to wishlist',
+      entry,
+      data: entry
+    });
   } catch (err) {
     next(err);
   }
@@ -25,14 +28,18 @@ const addToWishlist = async (req, res, next) => {
 
 /**
  * Get current user's full wishlist
- * @route GET /api/wishlist
- * @access Private
  */
 const getWishlist = async (req, res, next) => {
   try {
     const userId = req.user.user_id;
     const wishlist = await wishlistService.getWishlist(userId);
-    return success(res, 'Wishlist retrieved successfully', { wishlist });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Wishlist retrieved successfully',
+      wishlist,
+      data: wishlist
+    });
   } catch (err) {
     next(err);
   }
@@ -40,8 +47,6 @@ const getWishlist = async (req, res, next) => {
 
 /**
  * Remove a book from the wishlist
- * @route DELETE /api/wishlist/:bookId
- * @access Private
  */
 const removeFromWishlist = async (req, res, next) => {
   try {
@@ -49,7 +54,11 @@ const removeFromWishlist = async (req, res, next) => {
     const bookId = req.params.bookId;
 
     const result = await wishlistService.removeFromWishlist(userId, bookId);
-    return success(res, result.message);
+    
+    return res.status(200).json({
+      success: true,
+      message: result.message
+    });
   } catch (err) {
     next(err);
   }

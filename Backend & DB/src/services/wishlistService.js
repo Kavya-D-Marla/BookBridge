@@ -1,34 +1,41 @@
 /**
  * Wishlist Service
- * Business logic for saving and managing a user's book wishlist.
- *
- * Design:
- * - Unique constraint (uk_user_book) in DB prevents duplicate saves.
- * - Removing a book that isn't in the wishlist returns a 404 (not silent).
- * - All DB operations use parameterized queries.
+ * Aligned with frontend schema format
  */
 
 const { pool } = require('../config/db');
 const AppError  = require('../utils/AppError');
 
-// ─── Public Service Methods ────────────────────────────────────────────────
+/**
+ * Map wishlist row to frontend WishlistItem structure
+ */
+const mapWishlistItemToFrontend = (item) => {
+  if (!item) return null;
+  return {
+    _id: String(item.wishlist_id),
+    createdAt: item.created_at,
+    book: {
+      _id: String(item.book_id),
+      title: item.title,
+      author: item.author,
+      condition: item.condition || 'Good',
+      price: Number(item.asking_price),
+      type: item.type || 'Sell',
+      image: item.image_url || '',
+      owner: {
+        _id: String(item.seller_id),
+        name: item.seller_name || 'Classmate',
+      },
+    },
+  };
+};
 
 /**
  * Add a book to the user's wishlist.
- *
- * Rules:
- * - Book must exist.
- * - A user cannot wishlist a book twice (unique constraint enforced at DB level;
- *   we pre-check for a clear error message).
- *
- * @param {number} userId
- * @param {number} bookId
- * @returns {Object} Wishlist entry with book details
  */
 const addToWishlist = async (userId, bookId) => {
-  // Verify the book exists and is not removed
   const [bookRows] = await pool.query(
-    `SELECT book_id, title, author, asking_price, status, image_url
+    `SELECT book_id, title, author, asking_price, status, image_url, type, seller_id
      FROM Book WHERE book_id = ? AND status != 'removed'`,
     [bookId]
   );
@@ -37,7 +44,6 @@ const addToWishlist = async (userId, bookId) => {
     throw AppError.notFound('Book not found or no longer available');
   }
 
-  // Check for duplicate before insert to return a friendly message
   const [existing] = await pool.query(
     'SELECT wishlist_id FROM Wishlist WHERE user_id = ? AND book_id = ?',
     [userId, bookId]
@@ -52,7 +58,6 @@ const addToWishlist = async (userId, bookId) => {
     [userId, bookId]
   );
 
-  // Return full entry with book details
   const [entryRows] = await pool.query(
     `SELECT
        w.wishlist_id,
@@ -64,6 +69,8 @@ const addToWishlist = async (userId, bookId) => {
        b.asking_price,
        b.status       AS book_status,
        b.image_url,
+       b.type,
+       b.seller_id,
        b.\`condition\`,
        seller.user_name AS seller_name
      FROM Wishlist w
@@ -73,14 +80,11 @@ const addToWishlist = async (userId, bookId) => {
     [result.insertId]
   );
 
-  return entryRows[0];
+  return mapWishlistItemToFrontend(entryRows[0]);
 };
 
 /**
  * Get all wishlist entries for a user, with full book details.
- *
- * @param {number} userId
- * @returns {Object[]}
  */
 const getWishlist = async (userId) => {
   const [rows] = await pool.query(
@@ -98,6 +102,8 @@ const getWishlist = async (userId) => {
        b.semester,
        b.branch,
        b.category,
+       b.type,
+       b.seller_id,
        seller.user_name       AS seller_name,
        seller.profile_picture AS seller_picture,
        seller.seller_verified AS seller_verified
@@ -109,16 +115,11 @@ const getWishlist = async (userId) => {
     [userId]
   );
 
-  return rows;
+  return rows.map(mapWishlistItemToFrontend);
 };
 
 /**
  * Remove a book from the user's wishlist.
- * Throws 404 if the entry doesn't exist (so the client knows it wasn't there).
- *
- * @param {number} userId
- * @param {number} bookId
- * @returns {{ message: string }}
  */
 const removeFromWishlist = async (userId, bookId) => {
   const [existing] = await pool.query(

@@ -36,16 +36,20 @@ const getNegotiationById = async (negotiationId) => {
        n.status,
        n.created_at,
        n.updated_at,
+       n.offered_book_id,
        b.title        AS book_title,
        b.author       AS book_author,
        b.asking_price AS book_asking_price,
        b.status       AS book_status,
        b.image_url    AS book_image_url,
+       b.type         AS book_type,
        b.seller_id,
        seller.user_name      AS seller_name,
        seller.profile_picture AS seller_picture,
        buyer.user_name       AS buyer_name,
-       buyer.profile_picture AS buyer_picture
+       buyer.profile_picture AS buyer_picture,
+       (SELECT title FROM Book WHERE book_id = n.offered_book_id) AS offered_book_title,
+       (SELECT author FROM Book WHERE book_id = n.offered_book_id) AS offered_book_author
      FROM Negotiation n
      JOIN Book b        ON n.book_id  = b.book_id
      JOIN User seller   ON b.seller_id = seller.user_id
@@ -100,7 +104,7 @@ const assertNegotiationActive = (negotiation) => {
  */
 const getLatestOffer = async (negotiationId) => {
   const [rows] = await pool.query(
-    `SELECT o.offer_id, o.negotiation_id, o.user_id, o.offered_price, o.timestamp,
+    `SELECT o.offer_id, o.negotiation_id, o.user_id, o.offered_price, o.timestamp, o.message,
             u.user_name, u.role
      FROM Offers o
      JOIN User u ON o.user_id = u.user_id
@@ -126,9 +130,11 @@ const getLatestOffer = async (negotiationId) => {
  * @param {number} buyerId
  * @param {number} bookId
  * @param {number} initialOfferPrice - First offer from the buyer
+ * @param {string} message - Proposal message
+ * @param {number} offeredBookId - Linked swap book ID
  * @returns {Object} { negotiation, offer }
  */
-const createNegotiation = async (buyerId, bookId, initialOfferPrice) => {
+const createNegotiation = async (buyerId, bookId, initialOfferPrice, message = null, offeredBookId = null) => {
   // 1. Verify book exists and is available
   const [books] = await pool.query(
     'SELECT book_id, seller_id, title, status, asking_price FROM Book WHERE book_id = ?',
@@ -165,18 +171,18 @@ const createNegotiation = async (buyerId, bookId, initialOfferPrice) => {
     );
   }
 
-  // 4. Create negotiation record
+  // 4. Create negotiation record with offered_book_id
   const [negResult] = await pool.query(
-    `INSERT INTO Negotiation (book_id, buyer_id, status) VALUES (?, ?, ?)`,
-    [bookId, buyerId, NEGOTIATION_STATUS.ACTIVE]
+    `INSERT INTO Negotiation (book_id, buyer_id, status, offered_book_id) VALUES (?, ?, ?, ?)`,
+    [bookId, buyerId, NEGOTIATION_STATUS.ACTIVE, offeredBookId]
   );
 
   const negotiationId = negResult.insertId;
 
   // 5. Record the initial offer from the buyer
   const [offerResult] = await pool.query(
-    `INSERT INTO Offers (negotiation_id, user_id, offered_price) VALUES (?, ?, ?)`,
-    [negotiationId, buyerId, initialOfferPrice]
+    `INSERT INTO Offers (negotiation_id, user_id, offered_price, message) VALUES (?, ?, ?, ?)`,
+    [negotiationId, buyerId, initialOfferPrice, message]
   );
 
   // 6. Reserve the book so other buyers know it is being negotiated
@@ -214,11 +220,9 @@ const getUserNegotiations = async (userId, role) => {
   let params;
 
   if (role === 'admin') {
-    // Admins can see all negotiations
     whereClause = '1=1';
     params = [];
   } else {
-    // Regular users see only their own negotiations (as buyer or as seller of the book)
     whereClause = 'n.buyer_id = ? OR b.seller_id = ?';
     params = [userId, userId];
   }
@@ -232,11 +236,18 @@ const getUserNegotiations = async (userId, role) => {
        n.created_at,
        n.updated_at,
        b.title        AS book_title,
+       b.author       AS book_author,
        b.asking_price AS book_asking_price,
+       b.status       AS book_status,
        b.image_url    AS book_image_url,
+       b.type         AS book_type,
        b.seller_id,
        seller.user_name  AS seller_name,
        buyer.user_name   AS buyer_name,
+       n.offered_book_id,
+       (SELECT title FROM Book WHERE book_id = n.offered_book_id) AS offered_book_title,
+       (SELECT author FROM Book WHERE book_id = n.offered_book_id) AS offered_book_author,
+       (SELECT message FROM Offers WHERE negotiation_id = n.negotiation_id ORDER BY timestamp ASC, offer_id ASC LIMIT 1) AS initial_message,
        -- Latest offer summary
        (SELECT offered_price
         FROM Offers o2
@@ -283,19 +294,13 @@ const getNegotiationDetails = async (negotiationId, userId, role) => {
 /**
  * Create a new offer inside an existing negotiation.
  *
- * Rules:
- * - Negotiation must be active.
- * - Only participants can place offers.
- * - Price must be > 0.
- * - Turn logic: the participant who made the LAST offer cannot offer again
- *   until the other side responds (prevents spamming).
- *
  * @param {number} negotiationId
  * @param {number} userId
  * @param {number} offeredPrice
+ * @param {string} message - Counteroffer message
  * @returns {Object} Newly created offer
  */
-const createOffer = async (negotiationId, userId, offeredPrice) => {
+const createOffer = async (negotiationId, userId, offeredPrice, message = null) => {
   const negotiation = await getNegotiationById(negotiationId);
 
   assertParticipant(negotiation, userId);
@@ -310,13 +315,13 @@ const createOffer = async (negotiationId, userId, offeredPrice) => {
     );
   }
 
-  // Append new offer row (never overwrite)
+  // Append new offer row with message
   const [result] = await pool.query(
-    `INSERT INTO Offers (negotiation_id, user_id, offered_price) VALUES (?, ?, ?)`,
-    [negotiationId, userId, offeredPrice]
+    `INSERT INTO Offers (negotiation_id, user_id, offered_price, message) VALUES (?, ?, ?, ?)`,
+    [negotiationId, userId, offeredPrice, message]
   );
 
-  // Update negotiation's updated_at so it surfaces at the top of lists
+  // Update negotiation's updated_at
   await pool.query(
     `UPDATE Negotiation SET updated_at = CURRENT_TIMESTAMP WHERE negotiation_id = ?`,
     [negotiationId]
@@ -344,16 +349,6 @@ const createOffer = async (negotiationId, userId, offeredPrice) => {
 
 /**
  * Accept the latest offer in a negotiation.
- *
- * Only the OTHER party can accept (you cannot accept your own offer).
- * On acceptance:
- * 1. Negotiation status → 'accepted'
- * 2. Transaction (agreement record) created at the accepted price
- * 3. Book status → 'sold'
- *
- * @param {number} negotiationId
- * @param {number} userId
- * @returns {Object} { negotiation, transaction }
  */
 const acceptOffer = async (negotiationId, userId) => {
   const negotiation = await getNegotiationById(negotiationId);
@@ -367,7 +362,6 @@ const acceptOffer = async (negotiationId, userId) => {
     throw AppError.badRequest('There are no offers to accept in this negotiation');
   }
 
-  // You cannot accept your own offer — the other party must accept
   if (latestOffer.user_id === userId) {
     throw AppError.forbidden(
       'You cannot accept your own offer. Wait for the other party to respond.'
@@ -380,7 +374,7 @@ const acceptOffer = async (negotiationId, userId) => {
     [NEGOTIATION_STATUS.ACCEPTED, negotiationId]
   );
 
-  // 2. Create agreement record (Transaction — no payment logic)
+  // 2. Create agreement record
   const [txResult] = await pool.query(
     `INSERT INTO Transaction (negotiation_id, amount, status) VALUES (?, ?, ?)`,
     [negotiationId, latestOffer.offered_price, TRANSACTION_STATUS.PENDING]
@@ -392,7 +386,6 @@ const acceptOffer = async (negotiationId, userId) => {
     [BOOK_STATUS.SOLD, negotiation.book_id]
   );
 
-  // Fetch refreshed records
   const updatedNegotiation = await getNegotiationById(negotiationId);
 
   const [txRows] = await pool.query(
@@ -414,15 +407,6 @@ const acceptOffer = async (negotiationId, userId) => {
 
 /**
  * Reject the current negotiation.
- *
- * Either participant can reject.
- * On rejection:
- * 1. Negotiation status → 'rejected'
- * 2. Book status reverts to 'available' (if no other active negotiations remain)
- *
- * @param {number} negotiationId
- * @param {number} userId
- * @returns {Object} Updated negotiation
  */
 const rejectNegotiation = async (negotiationId, userId) => {
   const negotiation = await getNegotiationById(negotiationId);
@@ -430,13 +414,11 @@ const rejectNegotiation = async (negotiationId, userId) => {
   assertParticipant(negotiation, userId);
   assertNegotiationActive(negotiation);
 
-  // Mark negotiation as rejected
   await pool.query(
     `UPDATE Negotiation SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE negotiation_id = ?`,
     [NEGOTIATION_STATUS.REJECTED, negotiationId]
   );
 
-  // Re-open the book if no other active negotiations exist for it
   await releaseBookIfFree(negotiation.book_id);
 
   const recipientId = userId === negotiation.buyer_id ? negotiation.seller_id : negotiation.buyer_id;
@@ -453,10 +435,6 @@ const rejectNegotiation = async (negotiationId, userId) => {
 
 /**
  * Cancel a negotiation (initiated by a participant who wants to withdraw).
- *
- * @param {number} negotiationId
- * @param {number} userId
- * @returns {Object} Updated negotiation
  */
 const cancelNegotiation = async (negotiationId, userId) => {
   const negotiation = await getNegotiationById(negotiationId);
@@ -485,12 +463,6 @@ const cancelNegotiation = async (negotiationId, userId) => {
 
 /**
  * Get the full chronological offer / counteroffer history for a negotiation.
- * Access restricted to participants (or admin).
- *
- * @param {number} negotiationId
- * @param {number} userId
- * @param {string} role
- * @returns {Object} { negotiation, history, acceptedOffer }
  */
 const getNegotiationHistory = async (negotiationId, userId, role) => {
   const negotiation = await getNegotiationById(negotiationId);
@@ -499,7 +471,6 @@ const getNegotiationHistory = async (negotiationId, userId, role) => {
     assertParticipant(negotiation, userId);
   }
 
-  // Full offer history — chronological order (oldest first)
   const [history] = await pool.query(
     `SELECT
        o.offer_id,
@@ -507,10 +478,10 @@ const getNegotiationHistory = async (negotiationId, userId, role) => {
        o.user_id,
        o.offered_price,
        o.timestamp,
+       o.message,
        u.user_name,
        u.profile_picture,
        u.role AS user_role,
-       -- Label each offer so the UI can distinguish buyer vs seller moves
        CASE WHEN o.user_id = n.buyer_id THEN 'buyer' ELSE 'seller' END AS made_by
      FROM Offers o
      JOIN User u        ON o.user_id       = u.user_id
@@ -520,7 +491,6 @@ const getNegotiationHistory = async (negotiationId, userId, role) => {
     [negotiationId]
   );
 
-  // Identify the accepted offer (last offer when status is accepted)
   let acceptedOffer = null;
   if (
     negotiation.status === NEGOTIATION_STATUS.ACCEPTED &&
@@ -534,9 +504,6 @@ const getNegotiationHistory = async (negotiationId, userId, role) => {
 
 /**
  * If a book has no remaining active negotiations, set it back to 'available'.
- * Called after a negotiation is rejected or cancelled.
- *
- * @param {number} bookId
  */
 const releaseBookIfFree = async (bookId) => {
   const [active] = await pool.query(
@@ -547,7 +514,6 @@ const releaseBookIfFree = async (bookId) => {
   );
 
   if (active.length === 0) {
-    // No remaining active negotiations — make book available again
     await pool.query(
       `UPDATE Book SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE book_id = ?`,
       [BOOK_STATUS.AVAILABLE, bookId]

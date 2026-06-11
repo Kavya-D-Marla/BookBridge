@@ -31,19 +31,35 @@ const { PAGINATION } = require('../config/constants');
  * @param {string|null} opts.referenceType - e.g. 'Negotiation', 'Message', 'Transaction'
  * @returns {number} Inserted notification_id
  */
-const createNotification = async ({
-  userId,
+const createNotification = async (
+  userIdOrObj,
   type,
   title,
-  content     = null,
   referenceId   = null,
   referenceType = null,
-}) => {
+  content       = null
+) => {
+  let userId = userIdOrObj;
+  let t = type;
+  let ti = title;
+  let rId = referenceId;
+  let rType = referenceType;
+  let c = content;
+
+  if (userIdOrObj && typeof userIdOrObj === 'object' && !Array.isArray(userIdOrObj)) {
+    userId = userIdOrObj.userId;
+    t = userIdOrObj.type;
+    ti = userIdOrObj.title;
+    c = userIdOrObj.content ?? null;
+    rId = userIdOrObj.referenceId ?? null;
+    rType = userIdOrObj.referenceType ?? null;
+  }
+
   const [result] = await pool.query(
     `INSERT INTO Notification
        (user_id, type, title, content, reference_id, reference_type, is_read)
      VALUES (?, ?, ?, ?, ?, ?, FALSE)`,
-    [userId, type, title, content, referenceId, referenceType]
+    [userId, t, ti, c, rId, rType]
   );
 
   return result.insertId;

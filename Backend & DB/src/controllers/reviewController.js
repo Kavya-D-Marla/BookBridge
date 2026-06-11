@@ -1,15 +1,28 @@
 /**
  * Review Controller
- * HTTP handlers for review endpoints.
+ * Aligned with frontend response formats
  */
 
 const reviewService = require('../services/reviewService');
-const { success }   = require('../utils/responseHelper');
+
+/**
+ * Map review record to frontend structure
+ */
+const mapReviewToFrontend = (rev) => {
+  if (!rev) return null;
+  return {
+    _id: String(rev.review_id),
+    reviewer: {
+      name: rev.reviewer_name || 'Classmate',
+    },
+    rating: Number(rev.rating),
+    comment: rev.comment || '',
+    createdAt: rev.created_at,
+  };
+};
 
 /**
  * Create a review for a completed transaction
- * @route POST /api/reviews
- * @access Private
  */
 const createReview = async (req, res, next) => {
   try {
@@ -24,39 +37,56 @@ const createReview = async (req, res, next) => {
       comment
     );
 
-    return success(res, 'Review submitted successfully', { review }, 201);
+    const mapped = mapReviewToFrontend(review);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Review submitted successfully',
+      review: mapped,
+      data: mapped
+    });
   } catch (err) {
     next(err);
   }
 };
 
 /**
- * Get all reviews for a specific user (their profile reviews)
- * @route GET /api/reviews/user/:userId
- * @access Private
+ * Get all reviews for a specific user
  */
 const getReviewsForUser = async (req, res, next) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.params.userId || req.params.id;
     const { page, limit } = req.query;
 
     const result = await reviewService.getReviewsForUser(userId, page, limit);
-    return success(res, 'Reviews retrieved successfully', result);
+    const mapped = result.reviews.map(mapReviewToFrontend);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Reviews retrieved successfully',
+      reviews: mapped,
+      data: mapped
+    });
   } catch (err) {
     next(err);
   }
 };
 
 /**
- * Get a single review by ID
- * @route GET /api/reviews/:id
- * @access Private
+ * Get a single review (fallback support)
  */
 const getReview = async (req, res, next) => {
   try {
     const reviewId = req.params.id;
     const review   = await reviewService.getReview(reviewId);
-    return success(res, 'Review retrieved successfully', { review });
+    const mapped = mapReviewToFrontend(review);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Review retrieved successfully',
+      review: mapped,
+      data: mapped
+    });
   } catch (err) {
     next(err);
   }

@@ -1,122 +1,147 @@
 /**
  * Request Controller
- * HTTP handlers for Book Request Board endpoints.
+ * Redirected to handle Book Trade Negotiations for frontend alignment
  */
 
-const requestService = require('../services/requestService');
-const { success }    = require('../utils/responseHelper');
+const { pool } = require('../config/db');
+const negotiationService = require('../services/negotiationService');
 
 /**
- * Create a new book request
- * @route POST /api/requests
- * @access Private
+ * Map negotiation database record to frontend request structure
  */
-const createRequest = async (req, res, next) => {
-  try {
-    const userId = req.user.user_id;
-    const data   = req.body;
+const mapNegotiationToRequest = (neg) => {
+  if (!neg) return null;
 
-    const request = await requestService.createRequest(userId, data);
-    return success(res, 'Book request created successfully', { request }, 201);
-  } catch (err) {
-    next(err);
+  let frontendStatus = 'Pending';
+  if (neg.status === 'accepted') {
+    frontendStatus = 'Accepted';
+  } else if (neg.status === 'rejected' || neg.status === 'cancelled' || neg.status === 'expired') {
+    frontendStatus = 'Declined';
+  } else if (neg.status === 'active') {
+    frontendStatus = neg.offer_count > 1 ? 'Negotiating' : 'Pending';
   }
+
+  return {
+    _id: String(neg.negotiation_id),
+    book: {
+      _id: String(neg.book_id),
+      title: neg.book_title,
+      author: neg.book_author || '',
+      price: Number(neg.book_asking_price),
+      type: neg.book_type || 'Sell',
+      image: neg.book_image_url || '',
+    },
+    buyer: {
+      _id: String(neg.buyer_id),
+      name: neg.buyer_name || 'Classmate',
+      rating: 4.8,
+    },
+    seller: {
+      _id: String(neg.seller_id),
+      name: neg.seller_name || 'Classmate',
+      rating: 4.8,
+    },
+    status: frontendStatus,
+    proposedPrice: neg.latest_offer_price ? Number(neg.latest_offer_price) : undefined,
+    offeredBook: neg.offered_book_id ? {
+      _id: String(neg.offered_book_id),
+      title: neg.offered_book_title || 'Swap book',
+      author: neg.offered_book_author || '',
+      price: 0,
+      type: 'Exchange'
+    } : undefined,
+    message: neg.initial_message || '',
+    createdAt: neg.created_at,
+  };
 };
 
 /**
- * Get all book requests (with optional filters, search, pagination)
- * @route GET /api/requests
- * @access Private
+ * Get all book negotiations involving current user
  */
 const getRequests = async (req, res, next) => {
   try {
-    const filters = req.query;
-    const result  = await requestService.getRequests(filters);
-    return success(res, 'Book requests retrieved successfully', result);
+    const userId = req.user.user_id;
+    const role = req.user.role;
+    const negotiations = await negotiationService.getUserNegotiations(userId, role);
+    const mapped = negotiations.map(mapNegotiationToRequest);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Negotiations retrieved successfully',
+      requests: mapped,
+      data: mapped
+    });
   } catch (err) {
     next(err);
   }
 };
 
 /**
- * Get full details of a single book request (incl. responses)
- * @route GET /api/requests/:id
- * @access Private
+ * Start a new negotiation
  */
-const getRequestDetails = async (req, res, next) => {
+const createRequest = async (req, res, next) => {
   try {
-    const requestId = req.params.id;
-    const result    = await requestService.getRequestDetails(requestId);
-    return success(res, 'Book request retrieved successfully', result);
-  } catch (err) {
-    next(err);
-  }
-};
+    const buyerId = req.user.user_id;
+    const { bookId, message, proposedPrice, offeredBookId } = req.body;
+    
+    let finalPrice = proposedPrice;
+    if (finalPrice === undefined || finalPrice === null) {
+      const [books] = await pool.query('SELECT asking_price FROM Book WHERE book_id = ?', [bookId]);
+      finalPrice = books.length > 0 ? books[0].asking_price : 0;
+    }
 
-/**
- * Update a book request
- * @route PUT /api/requests/:id
- * @access Private (owner only)
- */
-const updateRequest = async (req, res, next) => {
-  try {
-    const requestId = req.params.id;
-    const userId    = req.user.user_id;
-    const updateData = req.body;
-
-    const request = await requestService.updateRequest(requestId, userId, updateData);
-    return success(res, 'Book request updated successfully', { request });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * Delete a book request
- * @route DELETE /api/requests/:id
- * @access Private (owner only)
- */
-const deleteRequest = async (req, res, next) => {
-  try {
-    const requestId = req.params.id;
-    const userId    = req.user.user_id;
-
-    const result = await requestService.deleteRequest(requestId, userId);
-    return success(res, result.message);
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * Seller responds to a book request
- * @route POST /api/requests/:id/respond
- * @access Private (verified sellers only)
- */
-const respondToRequest = async (req, res, next) => {
-  try {
-    const requestId = req.params.id;
-    const sellerId  = req.user.user_id;
-    const { message, bookId = null } = req.body;
-
-    const response = await requestService.respondToRequest(
-      requestId,
-      sellerId,
-      message,
-      bookId
+    const result = await negotiationService.createNegotiation(
+      buyerId, 
+      parseInt(bookId, 10), 
+      parseFloat(finalPrice), 
+      message, 
+      offeredBookId ? parseInt(offeredBookId, 10) : null
     );
 
-    return success(res, 'Response submitted successfully', { response }, 201);
+    const mapped = mapNegotiationToRequest(result.negotiation);
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Negotiation started successfully',
+      request: mapped,
+      data: mapped
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Accept or decline a trade negotiation
+ */
+const updateRequestStatus = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const negotiationId = req.params.id;
+    const { status } = req.body; // 'Accepted' or 'Declined'
+
+    let result;
+    if (status === 'Accepted') {
+      result = await negotiationService.acceptOffer(negotiationId, userId);
+    } else {
+      result = await negotiationService.rejectNegotiation(negotiationId, userId);
+    }
+
+    const mapped = mapNegotiationToRequest(result.negotiation || result);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Negotiation status updated successfully',
+      request: mapped,
+      data: mapped
+    });
   } catch (err) {
     next(err);
   }
 };
 
 module.exports = {
-  createRequest,
   getRequests,
-  getRequestDetails,
-  updateRequest,
-  deleteRequest,
-  respondToRequest,
+  createRequest,
+  updateRequestStatus,
 };

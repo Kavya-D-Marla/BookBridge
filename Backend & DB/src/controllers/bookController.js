@@ -15,7 +15,14 @@ const getBooks = async (req, res, next) => {
   try {
     const filters = req.query;
     const result = await bookService.getBooks(filters);
-    return success(res, 'Books retrieved successfully', result);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Books retrieved successfully',
+      books: result.books,
+      pagination: result.pagination,
+      data: result.books
+    });
   } catch (err) {
     next(err);
   }
@@ -30,7 +37,34 @@ const getBookById = async (req, res, next) => {
   try {
     const bookId = req.params.id;
     const book = await bookService.getBookById(bookId);
-    return success(res, 'Book retrieved successfully', { book });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Book retrieved successfully',
+      ...book,
+      data: book
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Get user's own listings (inventory)
+ * @route GET /api/books/my-inventory
+ * @access Private (Verified Seller)
+ */
+const getMyInventory = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const books = await bookService.getMyInventory(userId);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'My inventory retrieved successfully',
+      books,
+      data: books
+    });
   } catch (err) {
     next(err);
   }
@@ -47,7 +81,13 @@ const createBook = async (req, res, next) => {
     const bookData = req.body;
     
     const newBook = await bookService.createBook(sellerId, bookData);
-    return success(res, 'Book listing created successfully', { book: newBook }, 201);
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Book listing created successfully',
+      ...newBook,
+      data: newBook
+    });
   } catch (err) {
     next(err);
   }
@@ -66,7 +106,13 @@ const updateBook = async (req, res, next) => {
     const updateData = req.body;
 
     const updatedBook = await bookService.updateBook(bookId, userId, updateData, userRole);
-    return success(res, 'Book listing updated successfully', { book: updatedBook });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Book listing updated successfully',
+      ...updatedBook,
+      data: updatedBook
+    });
   } catch (err) {
     next(err);
   }
@@ -120,6 +166,7 @@ const getPriceRecommendation = (req, res, next) => {
 module.exports = {
   getBooks,
   getBookById,
+  getMyInventory,
   createBook,
   updateBook,
   deleteBook,

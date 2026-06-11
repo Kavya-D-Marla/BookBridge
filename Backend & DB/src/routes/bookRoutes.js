@@ -40,6 +40,17 @@ router.get(
 );
 
 /**
+ * @route   GET /api/books/my-inventory
+ * @desc    Get user's own listings (inventory)
+ * @access  Private (Verified Seller)
+ */
+router.get(
+  '/my-inventory',
+  verifyJWT,
+  bookController.getMyInventory
+);
+
+/**
  * @route   GET /api/books
  * @desc    Get all books with optional filters, search, and pagination
  * @access  Public

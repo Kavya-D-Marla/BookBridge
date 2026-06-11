@@ -73,4 +73,16 @@ router.put(
   messageController.markMessageRead
 );
 
+/**
+ * @route   GET /api/messages/:userId
+ * @desc    Get full message history with a specific user (compatibility route)
+ * @access  Private
+ */
+router.get(
+  '/:userId',
+  validateIdParam('userId'),
+  handleValidationErrors,
+  messageController.getConversationHistory
+);
+
 module.exports = router;

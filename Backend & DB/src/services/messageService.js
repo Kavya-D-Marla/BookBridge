@@ -1,13 +1,6 @@
 /**
  * Message Service
- * Business logic for REST-based persistent messaging.
- *
- * Design principles:
- * - Messages are NEVER deleted — all history is permanent.
- * - A "conversation" is the bidirectional thread between two users
- *   (sender_id ↔ receiver_id treated symmetrically).
- * - negotiation_id is optional: messages may exist independently of negotiations.
- * - All DB operations use parameterized queries.
+ * Aligned with frontend schema format
  */
 
 const { pool } = require('../config/db');
@@ -17,13 +10,6 @@ const { createNotification } = require('./notificationService');
 
 // ─── Internal Helpers ──────────────────────────────────────────────────────
 
-/**
- * Fetch a single message by ID.
- * Throws 404 if not found.
- *
- * @param {number} messageId
- * @returns {Object}
- */
 const getMessageById = async (messageId) => {
   const [rows] = await pool.query(
     `SELECT m.*,
@@ -45,27 +31,11 @@ const getMessageById = async (messageId) => {
 
 // ─── Public Service Methods ────────────────────────────────────────────────
 
-/**
- * Send a new message.
- *
- * Rules:
- * - Sender cannot message themselves.
- * - Content must be non-empty (validated at route level, but double-checked here).
- * - If negotiation_id is provided it must exist and the sender must be a participant.
- *
- * @param {number} senderId
- * @param {number} receiverId
- * @param {string} content
- * @param {number|null} negotiationId  - Optional
- * @returns {Object} The newly created message record
- */
 const sendMessage = async (senderId, receiverId, content, negotiationId = null) => {
-  // Cannot message yourself
   if (senderId === receiverId) {
     throw AppError.badRequest('You cannot send a message to yourself');
   }
 
-  // Verify receiver exists
   const [receiverRows] = await pool.query(
     'SELECT user_id FROM User WHERE user_id = ?',
     [receiverId]
@@ -75,32 +45,6 @@ const sendMessage = async (senderId, receiverId, content, negotiationId = null) 
     throw AppError.notFound('Recipient user not found');
   }
 
-  // If linked to a negotiation, verify the sender is a participant
-  if (negotiationId !== null) {
-    const [negRows] = await pool.query(
-      `SELECT n.negotiation_id, n.buyer_id, b.seller_id
-       FROM Negotiation n
-       JOIN Book b ON n.book_id = b.book_id
-       WHERE n.negotiation_id = ?`,
-      [negotiationId]
-    );
-
-    if (negRows.length === 0) {
-      throw AppError.notFound('Negotiation not found');
-    }
-
-    const neg = negRows[0];
-    const isParticipant =
-      neg.buyer_id === senderId || neg.seller_id === senderId;
-
-    if (!isParticipant) {
-      throw AppError.forbidden(
-        'You are not a participant in the referenced negotiation'
-      );
-    }
-  }
-
-  // Insert message (permanently stored)
   const [result] = await pool.query(
     `INSERT INTO Message (sender_id, receiver_id, negotiation_id, content, is_read)
      VALUES (?, ?, ?, ?, FALSE)`,
@@ -109,7 +53,6 @@ const sendMessage = async (senderId, receiverId, content, negotiationId = null) 
 
   const messageRecord = await getMessageById(result.insertId);
 
-  // Send notification to receiver
   await createNotification(
     receiverId,
     'message',
@@ -121,19 +64,6 @@ const sendMessage = async (senderId, receiverId, content, negotiationId = null) 
   return messageRecord;
 };
 
-/**
- * Get all distinct conversations for a user.
- *
- * A conversation is a unique pairing of (current user ↔ other user).
- * Returns one row per conversation partner, showing:
- * - partner details
- * - latest message snippet
- * - latest message timestamp
- * - unread count (messages FROM partner that current user hasn't read)
- *
- * @param {number} userId
- * @returns {Object[]}
- */
 const getConversations = async (userId) => {
   const [rows] = await pool.query(
     `SELECT
@@ -141,26 +71,21 @@ const getConversations = async (userId) => {
        partner.user_name         AS partner_name,
        partner.profile_picture   AS partner_picture,
        partner.role              AS partner_role,
-
-       -- Latest message in this conversation (either direction)
        latest.content            AS last_message,
        latest.created_at         AS last_message_at,
        latest.sender_id          AS last_sender_id,
-
-       -- Unread: messages sent by partner that I haven't read
-       COALESCE(unread.cnt, 0)   AS unread_count
-
+       COALESCE(unread.cnt, 0)   AS unread_count,
+       b.book_id,
+       b.title                   AS book_title,
+       b.asking_price            AS book_asking_price,
+       b.type                    AS book_type
      FROM (
-       -- Gather all distinct conversation partners
        SELECT DISTINCT
          CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS partner_id
        FROM Message
        WHERE sender_id = ? OR receiver_id = ?
      ) AS conv
-
      JOIN User partner ON partner.user_id = conv.partner_id
-
-     -- Latest message subquery
      JOIN Message latest ON latest.message_id = (
        SELECT message_id
        FROM Message
@@ -169,32 +94,26 @@ const getConversations = async (userId) => {
        ORDER BY created_at DESC, message_id DESC
        LIMIT 1
      )
-
-     -- Unread count subquery
+     LEFT JOIN Negotiation n ON COALESCE(latest.negotiation_id, 
+       (SELECT negotiation_id FROM Negotiation 
+        WHERE (buyer_id = ? AND book_id IN (SELECT book_id FROM Book WHERE seller_id = conv.partner_id))
+           OR (buyer_id = conv.partner_id AND book_id IN (SELECT book_id FROM Book WHERE seller_id = ?))
+        ORDER BY updated_at DESC LIMIT 1)
+     ) = n.negotiation_id
+     LEFT JOIN Book b ON n.book_id = b.book_id
      LEFT JOIN (
        SELECT sender_id, COUNT(*) AS cnt
        FROM Message
        WHERE receiver_id = ? AND is_read = FALSE
        GROUP BY sender_id
      ) AS unread ON unread.sender_id = conv.partner_id
-
      ORDER BY last_message_at DESC`,
-    [userId, userId, userId, userId, userId, userId]
+    [userId, userId, userId, userId, userId, userId, userId, userId, userId]
   );
 
   return rows;
 };
 
-/**
- * Get the full chronological message history between two users.
- * Only the two participants may access the thread.
- *
- * @param {number} currentUserId   - The requesting user
- * @param {number} otherUserId     - The conversation partner
- * @param {number} page
- * @param {number} limit
- * @returns {Object} { messages, pagination }
- */
 const getConversationHistory = async (
   currentUserId,
   otherUserId,
@@ -204,7 +123,6 @@ const getConversationHistory = async (
   const queryLimit = Math.min(parseInt(limit, 10), PAGINATION.MAX_LIMIT);
   const offset = (parseInt(page, 10) - 1) * queryLimit;
 
-  // Verify the other user exists
   const [otherRows] = await pool.query(
     'SELECT user_id, user_name, profile_picture, role FROM User WHERE user_id = ?',
     [otherUserId]
@@ -214,7 +132,6 @@ const getConversationHistory = async (
     throw AppError.notFound('User not found');
   }
 
-  // Count total messages in this thread (both directions)
   const [countRows] = await pool.query(
     `SELECT COUNT(*) AS total FROM Message
      WHERE (sender_id = ? AND receiver_id = ?)
@@ -224,7 +141,6 @@ const getConversationHistory = async (
 
   const total = countRows[0].total;
 
-  // Fetch paginated messages — oldest first for chronological reading
   const [messages] = await pool.query(
     `SELECT
        m.message_id,
@@ -257,14 +173,6 @@ const getConversationHistory = async (
   };
 };
 
-/**
- * Mark a single message as read.
- * Only the intended receiver may mark it read.
- *
- * @param {number} messageId
- * @param {number} userId  - Must be the receiver
- * @returns {Object} Updated message
- */
 const markMessageRead = async (messageId, userId) => {
   const message = await getMessageById(messageId);
 
@@ -273,7 +181,7 @@ const markMessageRead = async (messageId, userId) => {
   }
 
   if (message.is_read) {
-    return message; // Already read — idempotent, no DB write needed
+    return message;
   }
 
   await pool.query(
@@ -284,13 +192,6 @@ const markMessageRead = async (messageId, userId) => {
   return getMessageById(messageId);
 };
 
-/**
- * Get the count of unread messages for the current user
- * (messages addressed to them that have not been read yet).
- *
- * @param {number} userId
- * @returns {{ unreadCount: number }}
- */
 const getUnreadCount = async (userId) => {
   const [rows] = await pool.query(
     'SELECT COUNT(*) AS unreadCount FROM Message WHERE receiver_id = ? AND is_read = FALSE',

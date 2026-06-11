@@ -124,6 +124,11 @@ const validateSendMessage = [
     .isInt({ min: 1 })
     .withMessage('negotiationId must be a positive integer')
     .toInt(),
+  body('bookId')
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage('bookId must be a positive integer')
+    .toInt(),
 ];
 
 // ─── Wishlist Rules ─────────────────────────────────────────
