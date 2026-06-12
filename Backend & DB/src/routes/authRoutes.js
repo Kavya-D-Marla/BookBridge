@@ -31,7 +31,7 @@ router.get(
   authLimiter,
   (req, res, next) => {
     passport.authenticate('google', {
-      failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`,
+      failureRedirect: `${process.env.FRONTEND_URL || 'https://book-bridge-eight.vercel.app'}/login?error=oauth_failed`,
       session: false,
     })(req, res, next);
   },

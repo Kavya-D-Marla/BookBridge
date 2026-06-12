@@ -23,7 +23,7 @@ const googleCallback = async (req, res, next) => {
     const code = await authService.generateAuthCode(user.user_id);
 
     // Redirect to frontend with code as a query parameter
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://book-bridge-eight.vercel.app';
     res.redirect(`${frontendUrl}/auth/callback?code=${code}`);
   } catch (err) {
     next(err);

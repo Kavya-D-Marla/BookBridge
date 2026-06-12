@@ -11,8 +11,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
-        description: 'Development server',
+        url: 'https://bookbridge-production-68a5.up.railway.app',
+        description: 'Production server',
       },
     ],
     components: {

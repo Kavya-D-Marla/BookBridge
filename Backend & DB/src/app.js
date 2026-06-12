@@ -37,7 +37,7 @@ app.use(helmet());
 // CORS configuration (allow frontend origin)
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'https://book-bridge-eight.vercel.app',
     credentials: true,
   })
 );
