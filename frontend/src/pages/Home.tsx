@@ -12,8 +12,6 @@ interface Book {
   category: string;
   condition: 'New' | 'Like New' | 'Very Good' | 'Good' | 'Fair' | 'Poor';
   price: number;
-  type: 'Sell' | 'Exchange' | 'Free';
-  exchangeFor?: string;
   image?: string;
   owner: {
     _id: string;
@@ -47,12 +45,7 @@ const CONDITIONS = [
   'Poor'
 ];
 
-const TYPES = [
-  { label: 'All Listings', value: '' },
-  { label: 'For Sale', value: 'Sell' },
-  { label: 'For Exchange', value: 'Exchange' },
-  { label: 'Free', value: 'Free' }
-];
+
 
 const STATUSES = ['All Books', 'Available', 'Reserved', 'Sold'];
 
@@ -61,7 +54,7 @@ export const Home: React.FC = () => {
   const [category, setCategory] = useState('All Categories');
   const [condition, setCondition] = useState('All Conditions');
   const [status, setStatus] = useState('All Books');
-  const [type, setType] = useState('');
+
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
 
   // Fetch wishlist ids to show bookmark status
@@ -97,13 +90,13 @@ export const Home: React.FC = () => {
 
   // Fetch books matching criteria
   const { data: books, isLoading, isError, refetch } = useQuery<Book[]>({
-    queryKey: ['books', search, category, condition, type, status],
+    queryKey: ['books', search, category, condition, status],
     queryFn: async () => {
       const params: any = {};
       if (search) params.search = search;
       if (category !== 'All Categories') params.category = category;
       if (condition !== 'All Conditions') params.condition = condition;
-      if (type) params.type = type;
+
       if (status !== 'All Books') params.status = status;
 
       try {
@@ -130,11 +123,11 @@ export const Home: React.FC = () => {
             <span>🎉 Exclusively for Students</span>
           </span>
           <h1 className="font-display text-3xl md:text-5xl font-extrabold leading-tight tracking-tight">
-            Exchange Textbooks <br />
-            With Your Campus Peers
+            Buy & Sell Textbooks <br />
+            On Campus
           </h1>
           <p className="text-sm md:text-base text-indigo-200">
-            Find required course books at half the cost, or trade your old books for next semester's essentials. Simple, direct, and zero commissions.
+            Discover course books at student-friendly prices, save money every semester, and give your textbooks a second life. Simple, direct, and commission-free.
           </p>
           <div className="pt-2 flex flex-wrap gap-3">
             <Link 
@@ -238,22 +231,7 @@ export const Home: React.FC = () => {
               />
             </div>
 
-            {/* Listing Types tabbed */}
-            <div className="flex bg-slate-100 p-1.5 rounded-xl self-stretch sm:self-auto">
-              {TYPES.map((t) => (
-                <button
-                  key={t.label}
-                  onClick={() => setType(t.value)}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                    type === t.value 
-                      ? 'bg-white text-indigo-700 shadow-sm' 
-                      : 'text-slate-600 hover:text-slate-950'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+
           </div>
 
           {/* Book Cards Grid */}
@@ -294,7 +272,6 @@ export const Home: React.FC = () => {
                   setSearch('');
                   setCategory('All Categories');
                   setCondition('All Conditions');
-                  setType('');
                 }}
                 className="mt-6 text-sm font-semibold text-indigo-600 hover:text-indigo-550 underline"
               >
@@ -353,13 +330,11 @@ export const Home: React.FC = () => {
 
                     {/* Floating badge for trade type */}
                     <span className={`absolute left-3 bottom-3 text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md shadow z-10 ${
-                      book.type === 'Sell' 
-                        ? 'bg-emerald-500 text-white' 
-                        : book.type === 'Exchange' 
-                          ? 'bg-amber-500 text-white' 
-                          : 'bg-indigo-600 text-white'
+                      book.price === 0
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-emerald-500 text-white'
                     }`}>
-                      {book.type === 'Sell' ? `$${book.price}` : book.type}
+                      {book.price === 0 ? 'FREE' : `$${book.price}`}
                     </span>
                   </div>
 

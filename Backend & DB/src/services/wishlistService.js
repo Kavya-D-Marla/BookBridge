@@ -20,7 +20,6 @@ const mapWishlistItemToFrontend = (item) => {
       author: item.author,
       condition: item.condition || 'Good',
       price: Number(item.asking_price),
-      type: item.type || 'Sell',
       image: item.image_url || '',
       owner: {
         _id: String(item.seller_id),
@@ -35,7 +34,7 @@ const mapWishlistItemToFrontend = (item) => {
  */
 const addToWishlist = async (userId, bookId) => {
   const [bookRows] = await pool.query(
-    `SELECT book_id, title, author, asking_price, status, image_url, type, seller_id
+    `SELECT book_id, title, author, asking_price, status, image_url, seller_id
      FROM Book WHERE book_id = ? AND status != 'removed'`,
     [bookId]
   );
@@ -69,7 +68,6 @@ const addToWishlist = async (userId, bookId) => {
        b.asking_price,
        b.status       AS book_status,
        b.image_url,
-       b.type,
        b.seller_id,
        b.\`condition\`,
        seller.user_name AS seller_name
@@ -102,7 +100,6 @@ const getWishlist = async (userId) => {
        b.semester,
        b.branch,
        b.category,
-       b.type,
        b.seller_id,
        seller.user_name       AS seller_name,
        seller.profile_picture AS seller_picture,

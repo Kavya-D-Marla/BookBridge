@@ -15,7 +15,6 @@ import Wishlist from './pages/Wishlist';
 import Requests from './pages/Requests';
 import Messages from './pages/Messages';
 import Profile from './pages/Profile';
-import Disputes from './pages/Disputes';
 import Admin from './pages/Admin';
 
 const queryClient = new QueryClient({
@@ -109,14 +108,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Profile />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/disputes" 
-                element={
-                  <ProtectedRoute>
-                    <Disputes />
                   </ProtectedRoute>
                 } 
               />

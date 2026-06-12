@@ -17,7 +17,6 @@ interface Book {
   title: string;
   author: string;
   price: number;
-  type: 'Sell' | 'Exchange' | 'Free';
   image?: string;
 }
 
@@ -34,7 +33,6 @@ interface Request {
   seller: UserSummary;
   status: 'Pending' | 'Accepted' | 'Declined' | 'Negotiating';
   proposedPrice?: number;
-  offeredBook?: Book;
   message?: string;
   createdAt: string;
 }
@@ -44,7 +42,6 @@ interface NegotiationRound {
   sender: UserSummary;
   message: string;
   proposedPrice?: number;
-  offeredBook?: Book;
   createdAt: string;
 }
 
@@ -107,9 +104,7 @@ export const Requests: React.FC = () => {
         requestId: negotiationRequest?._id,
         message: negMessage
       };
-      if (negotiationRequest?.book.type === 'Sell') {
-        payload.proposedPrice = negPrice;
-      }
+      payload.proposedPrice = negPrice;
       return api.post('/negotiations', payload);
     },
     onSuccess: () => {
@@ -244,11 +239,6 @@ export const Requests: React.FC = () => {
                         <span>Proposed Price: <strong>${req.proposedPrice}</strong></span>
                       </div>
                     )}
-                    {req.offeredBook && (
-                      <p className="text-slate-700 font-medium">
-                        Swap offer: <strong className="text-indigo-700">"{req.offeredBook.title}"</strong> by {req.offeredBook.author}
-                      </p>
-                    )}
                   </div>
                 </div>
 
@@ -331,12 +321,6 @@ export const Requests: React.FC = () => {
                         </div>
                       )}
                       
-                      {round.offeredBook && (
-                        <div className="mt-2 pt-2 border-t border-white/20">
-                          <p className="font-semibold">Swap offer:</p>
-                          <p className="italic">"{round.offeredBook.title}"</p>
-                        </div>
-                      )}
                     </div>
                     <span className="text-[9px] text-slate-450 mt-1 px-1">
                       {new Date(round.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -355,8 +339,6 @@ export const Requests: React.FC = () => {
                 }}
                 className="p-6 border-t border-slate-150 bg-white space-y-4"
               >
-                {/* Proposed Counter Price */}
-                {negotiationRequest.book.type === 'Sell' && (
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                       Your Counter Price ($)
@@ -369,7 +351,6 @@ export const Requests: React.FC = () => {
                       required
                     />
                   </div>
-                )}
 
                 {/* Proposed message */}
                 <div>

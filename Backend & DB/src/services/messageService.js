@@ -78,7 +78,7 @@ const getConversations = async (userId) => {
        b.book_id,
        b.title                   AS book_title,
        b.asking_price            AS book_asking_price,
-       b.type                    AS book_type
+       b.image_url               AS book_image
      FROM (
        SELECT DISTINCT
          CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS partner_id

@@ -94,8 +94,7 @@ const getConversations = async (req, res, next) => {
       book: {
         _id: String(c.book_id || ''),
         title: c.book_title || 'Unknown Book',
-        price: Number(c.book_asking_price || 0),
-        type: c.book_type || 'Sell'
+        price: Number(c.book_asking_price || 0)
       },
       lastMessage: c.last_message ? {
         content: c.last_message,

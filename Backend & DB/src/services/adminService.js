@@ -416,23 +416,11 @@ const getDashboardStats = async () => {
        COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) AS total_completed_value
      FROM Transaction`
   );
-
-  const [[disputeStats]] = await pool.query(
-    `SELECT
-       COUNT(*)                                                         AS total_disputes,
-       SUM(CASE WHEN status = 'open'         THEN 1 ELSE 0 END)       AS open,
-       SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END)       AS under_review,
-       SUM(CASE WHEN status = 'resolved'     THEN 1 ELSE 0 END)       AS resolved,
-       SUM(CASE WHEN status = 'dismissed'    THEN 1 ELSE 0 END)       AS dismissed
-     FROM Dispute`
-  );
-
   return {
     users:        userStats,
     books:        bookStats,
     negotiations: negotiationStats,
     transactions: transactionStats,
-    disputes:     disputeStats,
   };
 };
 

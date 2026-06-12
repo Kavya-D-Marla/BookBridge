@@ -36,20 +36,16 @@ const getNegotiationById = async (negotiationId) => {
        n.status,
        n.created_at,
        n.updated_at,
-       n.offered_book_id,
        b.title        AS book_title,
        b.author       AS book_author,
        b.asking_price AS book_asking_price,
        b.status       AS book_status,
        b.image_url    AS book_image_url,
-       b.type         AS book_type,
        b.seller_id,
        seller.user_name      AS seller_name,
        seller.profile_picture AS seller_picture,
        buyer.user_name       AS buyer_name,
-       buyer.profile_picture AS buyer_picture,
-       (SELECT title FROM Book WHERE book_id = n.offered_book_id) AS offered_book_title,
-       (SELECT author FROM Book WHERE book_id = n.offered_book_id) AS offered_book_author
+       buyer.profile_picture AS buyer_picture
      FROM Negotiation n
      JOIN Book b        ON n.book_id  = b.book_id
      JOIN User seller   ON b.seller_id = seller.user_id
@@ -134,7 +130,7 @@ const getLatestOffer = async (negotiationId) => {
  * @param {number} offeredBookId - Linked swap book ID
  * @returns {Object} { negotiation, offer }
  */
-const createNegotiation = async (buyerId, bookId, initialOfferPrice, message = null, offeredBookId = null) => {
+const createNegotiation = async (buyerId, bookId, initialOfferPrice, message = null) => {
   // 1. Verify book exists and is available
   const [books] = await pool.query(
     'SELECT book_id, seller_id, title, status, asking_price FROM Book WHERE book_id = ?',
@@ -173,8 +169,8 @@ const createNegotiation = async (buyerId, bookId, initialOfferPrice, message = n
 
   // 4. Create negotiation record with offered_book_id
   const [negResult] = await pool.query(
-    `INSERT INTO Negotiation (book_id, buyer_id, status, offered_book_id) VALUES (?, ?, ?, ?)`,
-    [bookId, buyerId, NEGOTIATION_STATUS.ACTIVE, offeredBookId]
+    `INSERT INTO Negotiation (book_id, buyer_id, status) VALUES (?, ?, ?)`,
+    [bookId, buyerId, NEGOTIATION_STATUS.ACTIVE]
   );
 
   const negotiationId = negResult.insertId;
@@ -240,13 +236,9 @@ const getUserNegotiations = async (userId, role) => {
        b.asking_price AS book_asking_price,
        b.status       AS book_status,
        b.image_url    AS book_image_url,
-       b.type         AS book_type,
        b.seller_id,
        seller.user_name  AS seller_name,
        buyer.user_name   AS buyer_name,
-       n.offered_book_id,
-       (SELECT title FROM Book WHERE book_id = n.offered_book_id) AS offered_book_title,
-       (SELECT author FROM Book WHERE book_id = n.offered_book_id) AS offered_book_author,
        (SELECT message FROM Offers WHERE negotiation_id = n.negotiation_id ORDER BY timestamp ASC, offer_id ASC LIMIT 1) AS initial_message,
        -- Latest offer summary
        (SELECT offered_price

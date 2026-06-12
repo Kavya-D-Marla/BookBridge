@@ -125,7 +125,7 @@ export const Wishlist: React.FC = () => {
                       Condition: {item.book.condition}
                     </span>
                     <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
-                      {item.book.type === 'Sell' ? `$${item.book.price}` : item.book.type}
+                      {item.book.price === 0 ? 'FREE' : `$${item.book.price}`}
                     </span>
                   </div>
                 </div>

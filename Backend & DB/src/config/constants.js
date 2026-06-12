@@ -49,19 +49,12 @@ const TRANSACTION_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
-const DISPUTE_STATUS = Object.freeze({
-  OPEN: 'open',
-  UNDER_REVIEW: 'under_review',
-  RESOLVED: 'resolved',
-  DISMISSED: 'dismissed',
-});
 
 const NOTIFICATION_TYPES = Object.freeze([
   'offer',
   'counteroffer',
   'message',
   'transaction',
-  'dispute',
   'review',
   'system',
   'request_response',
@@ -98,7 +91,7 @@ module.exports = {
   BOOK_STATUS,
   NEGOTIATION_STATUS,
   TRANSACTION_STATUS,
-  DISPUTE_STATUS,
+
   NOTIFICATION_TYPES,
   REQUEST_STATUS,
   PRICE_MULTIPLIERS,

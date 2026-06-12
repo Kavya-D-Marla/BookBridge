@@ -6,7 +6,7 @@
  * - Notifications are INSERT-only — never deleted by users (hard delete only for cascade on user delete).
  * - A helper `createNotification()` is exported so other services (Phase 6+) can emit
  *   notifications without coupling to the HTTP layer.
- * - Supported types mirror the DB enum: offer | counteroffer | message | transaction | dispute | review | system
+ * - Supported types mirror the DB enum: offer | counteroffer | message | transaction | review | system
  * - reference_id + reference_type provide polymorphic linking back to the source record.
  * - All DB operations use parameterized queries.
  */

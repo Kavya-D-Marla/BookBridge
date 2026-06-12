@@ -141,25 +141,6 @@ CREATE TABLE IF NOT EXISTS Transaction (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================================
--- 7. Dispute
--- Base entity from ER diagram (no changes needed)
--- ============================================================
-CREATE TABLE IF NOT EXISTS Dispute (
-    dispute_id INT AUTO_INCREMENT PRIMARY KEY,
-    transaction_id INT NOT NULL,
-    raised_by INT NOT NULL,
-    reason TEXT NOT NULL,
-    status ENUM('open', 'under_review', 'resolved', 'dismissed') DEFAULT 'open',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    resolved_at TIMESTAMP NULL,
-
-    FOREIGN KEY (transaction_id) REFERENCES Transaction(transaction_id) ON DELETE CASCADE,
-    FOREIGN KEY (raised_by) REFERENCES User(user_id) ON DELETE CASCADE,
-    INDEX idx_transaction (transaction_id),
-    INDEX idx_raised_by (raised_by),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
 -- 8. Message (NEW — approved)
@@ -214,7 +195,7 @@ CREATE TABLE IF NOT EXISTS Review (
 CREATE TABLE IF NOT EXISTS Notification (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    type ENUM('offer', 'counteroffer', 'message', 'transaction', 'dispute', 'review', 'system') NOT NULL,
+    type ENUM('offer', 'counteroffer', 'message', 'transaction', 'review', 'system') NOT NULL,
     title VARCHAR(255) NOT NULL,
     content TEXT,
     reference_id INT,

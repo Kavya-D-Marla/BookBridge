@@ -244,7 +244,7 @@ export const Messages: React.FC = () => {
                     to={`/books/${activeConv.book._id}`}
                     className="text-[10px] text-indigo-600 font-bold hover:underline flex items-center"
                   >
-                    Reference: {activeConv.book.title} ({activeConv.book.type === 'Sell' ? `$${activeConv.book.price}` : activeConv.book.type})
+                    Reference: {activeConv.book.title} ({activeConv.book.price === 0 ? 'FREE' : `$${activeConv.book.price}`})
                   </Link>
                 </div>
               </div>

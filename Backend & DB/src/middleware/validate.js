@@ -239,38 +239,6 @@ const validateCreateReview = [
     .withMessage('Comment cannot exceed 2000 characters'),
 ];
 
-// ─── Dispute Rules ───────────────────────────────────────────
-
-/**
- * Validates the body for POST /api/disputes
- * Requires: transactionId (positive int), reason (non-empty string)
- */
-const validateRaiseDispute = [
-  body('transactionId')
-    .notEmpty()
-    .withMessage('transactionId is required')
-    .isInt({ min: 1 })
-    .withMessage('transactionId must be a positive integer')
-    .toInt(),
-  body('reason')
-    .trim()
-    .notEmpty()
-    .withMessage('Dispute reason is required')
-    .isLength({ max: 2000 })
-    .withMessage('Reason cannot exceed 2000 characters'),
-];
-
-/**
- * Validates the body for PUT /api/disputes/:id/status (admin only)
- * Requires: status — one of the valid dispute status values
- */
-const validateUpdateDisputeStatus = [
-  body('status')
-    .notEmpty()
-    .withMessage('status is required')
-    .isIn(['under_review', 'resolved', 'dismissed'])
-    .withMessage('status must be one of: under_review, resolved, dismissed'),
-];
 
 // ─── Admin Rules ─────────────────────────────────────────────
 
@@ -313,8 +281,7 @@ module.exports = {
   validateCreateRequest,
   validateRespondToRequest,
   validateCreateReview,
-  validateRaiseDispute,
-  validateUpdateDisputeStatus,
+
   validateAdminUpdateUser,
   validateAdminUpdateTransactionStatus,
 };

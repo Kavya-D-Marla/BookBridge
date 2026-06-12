@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from './Navbar';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen } from 'lucide-react';
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,8 +15,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center space-y-4">
           {/* Pulsing Book Logo */}
-          <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-650 bg-gradient-to-br from-indigo-600 to-indigo-500 text-white shadow-premium animate-pulse">
-            <BookOpen className="h-8 w-8" />
+          <div className="relative flex items-center justify-center animate-pulse">
+            <img src="/logo.png" alt="BookBridge Logo" className="h-20 w-auto object-contain mix-blend-multiply scale-125" />
           </div>
           {/* Elegant Loading Text */}
           <h2 className="font-display text-lg font-bold text-slate-800 tracking-wide">
@@ -46,8 +46,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
           <p>&copy; {new Date().getFullYear()} BookBridge. Built for students, by students.</p>
           <div className="flex space-x-4 mt-2 sm:mt-0">
-            <a href="/disputes" className="hover:text-indigo-600 transition">Report an Issue</a>
-            <span>&bull;</span>
             <span className="cursor-default">Version 1.0.0</span>
           </div>
         </div>

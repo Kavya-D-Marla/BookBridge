@@ -10,8 +10,7 @@ import {
   Star, 
   Calendar,
   Send,
-  X,
-  Plus
+  X
 } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import api from '../api/axios';
@@ -25,8 +24,6 @@ interface Book {
   category: string;
   condition: 'New' | 'Like New' | 'Very Good' | 'Good' | 'Fair' | 'Poor';
   price: number;
-  type: 'Sell' | 'Exchange' | 'Free';
-  exchangeFor?: string;
   image?: string;
   owner: {
     _id: string;
@@ -39,11 +36,6 @@ interface Book {
   createdAt: string;
 }
 
-interface UserInventoryBook {
-  _id: string;
-  title: string;
-  author: string;
-}
 
 export const BookDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -53,11 +45,8 @@ export const BookDetails: React.FC = () => {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
   const [proposedPrice, setProposedPrice] = useState<number>(0);
-  const [selectedOfferedBookId, setSelectedOfferedBookId] = useState('');
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   
-  // User's inventory for swaps
-  const [userInventory, setUserInventory] = useState<UserInventoryBook[]>([]);
 
   // Fetch book details
   const { data: book, isLoading, isError } = useQuery<Book>({
@@ -88,20 +77,7 @@ export const BookDetails: React.FC = () => {
     fetchWishlist();
   }, [isAuthenticated]);
 
-  // Fetch user's inventory (to offer as trade swaps)
-  React.useEffect(() => {
-    if (!isAuthenticated || !requestModalOpen) return;
-    const fetchInventory = async () => {
-      try {
-        const response = await api.get('/books/my-inventory');
-        const list = Array.isArray(response.data) ? response.data : (response.data.books || []);
-        setUserInventory(list);
-      } catch (err) {
-        throw err;
-      }
-    };
-    fetchInventory();
-  }, [isAuthenticated, requestModalOpen]);
+
 
   // Initialize proposed price when book is loaded
   React.useEffect(() => {
@@ -150,12 +126,7 @@ export const BookDetails: React.FC = () => {
         bookId: id,
         message: requestMessage,
       };
-      if (book?.type === 'Sell') {
-        payload.proposedPrice = proposedPrice;
-      }
-      if (book?.type === 'Exchange' && selectedOfferedBookId) {
-        payload.offeredBookId = selectedOfferedBookId;
-      }
+      payload.proposedPrice = proposedPrice;
       return api.post('/requests', payload);
     },
     onSuccess: () => {
@@ -258,22 +229,16 @@ export const BookDetails: React.FC = () => {
                 <p className="text-base text-slate-500 font-medium">by {book.author}</p>
               </div>
 
-              {/* Price or Exchange Display */}
+              {/* Price Display */}
               <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Trading Option</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Price</span>
                   <div className="mt-1 flex items-baseline">
                     <span className="text-2xl font-extrabold text-slate-900">
-                      {book.type === 'Sell' ? `$${book.price}` : book.type}
+                      {book.price === 0 ? 'FREE' : `$${book.price}`}
                     </span>
                   </div>
                 </div>
-                {book.type === 'Exchange' && book.exchangeFor && (
-                  <div className="text-right border-l border-slate-200 pl-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Looking for:</span>
-                    <p className="mt-0.5 text-sm font-semibold text-indigo-700 max-w-[200px] truncate">{book.exchangeFor}</p>
-                  </div>
-                )}
               </div>
 
               {/* Description */}
@@ -419,50 +384,19 @@ export const BookDetails: React.FC = () => {
             </p>
 
             <form onSubmit={handleRequestSubmit} className="mt-6 space-y-4">
-              {/* Dynamic counter pricing offer */}
-              {book.type === 'Sell' && (
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Proposed Offer ($)
-                  </label>
-                  <input
-                    type="number"
-                    value={proposedPrice}
-                    onChange={(e) => setProposedPrice(Math.max(0, Number(e.target.value)))}
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-550 shadow-sm"
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Dynamic swap option selection */}
-              {book.type === 'Exchange' && (
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Offer one of your textbooks:
-                  </label>
-                  {userInventory.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-slate-200 p-3 text-center">
-                      <p className="text-xs text-slate-500">You don't have any books in your inventory to trade.</p>
-                      <Link to="/inventory" className="text-xs font-bold text-indigo-650 hover:underline mt-1.5 inline-flex items-center">
-                        <Plus className="h-3 w-3 mr-1" /> List a book first
-                      </Link>
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedOfferedBookId}
-                      onChange={(e) => setSelectedOfferedBookId(e.target.value)}
-                      className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-550 shadow-sm"
-                      required
-                    >
-                      <option value="">-- Select a textbook to swap --</option>
-                      {userInventory.map(item => (
-                        <option key={item._id} value={item._id}>{item.title} (by {item.author})</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              )}
+              {/* Pricing offer */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Proposed Offer ($)
+                </label>
+                <input
+                  type="number"
+                  value={proposedPrice}
+                  onChange={(e) => setProposedPrice(Math.max(0, Number(e.target.value)))}
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-550 shadow-sm"
+                  required
+                />
+              </div>
 
               {/* Message */}
               <div>
@@ -489,7 +423,7 @@ export const BookDetails: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={requestMutation.isPending || (book.type === 'Exchange' && !selectedOfferedBookId)}
+                  disabled={requestMutation.isPending}
                   className="flex-1 rounded-lg bg-indigo-650 bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-750 transition disabled:opacity-50 flex justify-center items-center"
                 >
                   {requestMutation.isPending ? (

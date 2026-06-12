@@ -23,8 +23,6 @@ const mapBookToFrontend = (book) => {
     branch: book.branch,
     condition: book.condition,
     price: Number(book.asking_price),
-    type: book.type || 'Sell',
-    exchangeFor: book.exchange_for || '',
     image: book.image_url || '',
     status: book.status === 'available' ? 'Available' : 
             book.status === 'reserved' ? 'Reserved' : 
@@ -64,8 +62,6 @@ const mapFrontendBookToBackend = (data) => {
     asking_price: data.price !== undefined ? parseFloat(data.price) : (data.asking_price !== undefined ? parseFloat(data.asking_price) : 0),
     published_year: data.publishedYear ? parseInt(data.publishedYear, 10) : (data.published_year ? parseInt(data.published_year, 10) : null),
     image_url: data.image || data.image_url || null,
-    type: data.type || 'Sell',
-    exchange_for: data.exchangeFor || data.exchange_for || null,
   };
 };
 
@@ -109,8 +105,8 @@ const createBook = async (sellerId, rawBookData) => {
   const [result] = await pool.query(
     `INSERT INTO Book 
       (seller_id, title, author, description, isbn, category, semester, branch, 
-       \`condition\`, original_price, asking_price, published_year, image_url, type, exchange_for, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       \`condition\`, original_price, asking_price, published_year, image_url, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       sellerId,
       bookData.title,
@@ -125,8 +121,6 @@ const createBook = async (sellerId, rawBookData) => {
       bookData.asking_price,
       bookData.published_year,
       bookData.image_url,
-      bookData.type,
-      bookData.exchange_for,
       BOOK_STATUS.AVAILABLE,
     ]
   );
@@ -148,7 +142,6 @@ const getBooks = async (filters) => {
     condition,
     semester,
     branch,
-    type,
     minPrice,
     maxPrice,
     status = 'All Books',
@@ -201,11 +194,6 @@ const getBooks = async (filters) => {
     whereClauses.push('b.branch = ?');
     queryParams.push(branch);
   }
-  if (type) {
-    whereClauses.push('b.type = ?');
-    queryParams.push(type);
-  }
-
   // Price range filters
   if (minPrice) {
     whereClauses.push('b.asking_price >= ?');
@@ -322,7 +310,7 @@ const updateBook = async (bookId, userId, rawUpdateData, userRole) => {
   const allowedFields = [
     'title', 'author', 'description', 'isbn', 'category', 'semester',
     'branch', 'condition', 'original_price', 'asking_price', 'published_year',
-    'image_url', 'type', 'exchange_for', 'status'
+    'image_url', 'status'
   ];
 
   const updateFields = [];

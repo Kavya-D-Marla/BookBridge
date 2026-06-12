@@ -1,6 +1,6 @@
 # BookBridge - Frontend
 
-BookBridge is a modern, responsive web application designed for a book exchange marketplace. It enables users to trade, request, and manage books seamlessly while providing features like real-time messaging, wishlists, and dispute resolution.
+BookBridge is a modern, responsive web application designed for a book exchange marketplace. It enables users to trade, request, and manage books seamlessly while providing features like real-time messaging and wishlists.
 
 ## Features
 
@@ -12,7 +12,6 @@ BookBridge is a modern, responsive web application designed for a book exchange 
 - **Requests System:** Send, receive, and manage book exchange requests.
 - **Messaging:** Communicate with other users regarding trades.
 - **User Profiles:** Manage personal information and settings.
-- **Dispute Resolution:** Built-in system for handling and resolving exchange disputes.
 - **Admin Dashboard:** Administrative controls for platform management.
 
 ## Tech Stack

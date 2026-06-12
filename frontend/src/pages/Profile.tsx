@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
 import { 
   User as UserIcon, 
   Mail, 
   Star, 
   ShieldAlert, 
-  Check, 
   MessageSquare,
   X,
   BadgeCheck
@@ -30,8 +29,6 @@ export const Profile: React.FC = () => {
   // Form profile states
   const [name, setName] = useState(user?.user_name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   
   // Rating form state
   const [rateUserId, setRateUserId] = useState('');
@@ -63,17 +60,11 @@ export const Profile: React.FC = () => {
   const profileMutation = useMutation({
     mutationFn: async () => {
       const payload: any = { name, email };
-      if (password && newPassword) {
-        payload.currentPassword = password;
-        payload.newPassword = newPassword;
-      }
       return api.put('/users/profile', payload);
     },
     onSuccess: (response) => {
       const updated = response.data?.user || { name, email };
       updateUser(updated);
-      setPassword('');
-      setNewPassword('');
       alert('Profile details updated successfully!');
     },
     onError: (err: any) => {
@@ -224,49 +215,6 @@ export const Profile: React.FC = () => {
               </div>
             </div>
 
-            {/* Change Password Block */}
-            <div className="pt-4 border-t border-slate-100 mt-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Change Password (optional)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Current Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="block w-full rounded-lg border border-slate-200 bg-slate-50 py-2 px-3 text-xs focus:border-indigo-550 focus:bg-white focus:outline-none shadow-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">New Password</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="At least 6 characters"
-                    className="block w-full rounded-lg border border-slate-200 bg-slate-50 py-2 px-3 text-xs focus:border-indigo-550 focus:bg-white focus:outline-none shadow-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                type="submit"
-                disabled={profileMutation.isPending}
-                className="rounded-lg bg-indigo-650 bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-750 transition flex items-center"
-              >
-                {profileMutation.isPending ? (
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-1" />
-                    <span>Save Changes</span>
-                  </>
-                )}
-              </button>
-            </div>
           </form>
         </div>
 
@@ -461,13 +409,6 @@ export const Profile: React.FC = () => {
               <MessageSquare className="h-4 w-4 text-indigo-500" />
               <span>Review a peer</span>
             </button>
-            <Link
-              to="/disputes"
-              className="w-full flex items-center justify-center space-x-1.5 rounded-lg bg-rose-50 border border-rose-100 py-2 text-xs font-semibold text-rose-650 hover:bg-rose-100 transition"
-            >
-              <ShieldAlert className="h-4 w-4" />
-              <span>Report an Issue</span>
-            </Link>
           </div>
         </div>
       </div>

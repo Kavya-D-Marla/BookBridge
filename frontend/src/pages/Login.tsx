@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { BookOpen, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -25,8 +25,8 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-premium border border-slate-100">
         {/* Title Block */}
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-650 mb-4">
-            <BookOpen className="h-6 w-6" />
+          <div className="flex items-center justify-center mb-4">
+            <img src="/logo.png" alt="BookBridge Logo" className="h-24 w-auto object-contain mix-blend-multiply scale-125" />
           </div>
           <h2 className="font-display text-3xl font-extrabold text-slate-900 tracking-tight">
             Welcome Back

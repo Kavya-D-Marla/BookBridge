@@ -13,8 +13,6 @@ interface Book {
   category: string;
   condition: 'New' | 'Like New' | 'Very Good' | 'Good' | 'Fair' | 'Poor';
   price: number;
-  type: 'Sell' | 'Exchange' | 'Free';
-  exchangeFor?: string;
   image?: string;
   status: 'Available' | 'Reserved' | 'Exchanged' | 'Sold';
   description?: string;
@@ -62,9 +60,7 @@ export const Inventory: React.FC = () => {
   const [isbn, setIsbn] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [condition, setCondition] = useState(CONDITIONS[2]); // Very Good
-  const [type, setType] = useState<'Sell' | 'Exchange' | 'Free'>('Sell');
   const [price, setPrice] = useState<number | string>('');
-  const [exchangeFor, setExchangeFor] = useState('');
   const [image, setImage] = useState('');
   const [description, setDescription] = useState('');
 
@@ -93,9 +89,7 @@ export const Inventory: React.FC = () => {
     setIsbn('');
     setCategory(CATEGORIES[0]);
     setCondition(CONDITIONS[2]);
-    setType('Sell');
     setPrice('');
-    setExchangeFor('');
     setImage('');
     setDescription('');
     setFormError(null);
@@ -110,9 +104,7 @@ export const Inventory: React.FC = () => {
     setIsbn(book.isbn || '');
     setCategory(book.category);
     setCondition(book.condition);
-    setType(book.type);
     setPrice(book.price);
-    setExchangeFor(book.exchangeFor || '');
     setImage(book.image || '');
     setDescription(book.description || '');
     setFormError(null);
@@ -124,10 +116,8 @@ export const Inventory: React.FC = () => {
   const submitMutation = useMutation({
     mutationFn: async () => {
       let parsedPrice = 0;
-      if (type === 'Sell') {
-        const p = parseFloat(String(price));
-        parsedPrice = isNaN(p) ? 0 : p;
-      }
+      const p = parseFloat(String(price));
+      parsedPrice = isNaN(p) ? 0 : p;
       
       const payload = {
         title,
@@ -135,9 +125,7 @@ export const Inventory: React.FC = () => {
         isbn: isbn || undefined,
         category,
         condition,
-        type,
         asking_price: parsedPrice,
-        exchangeFor: type === 'Exchange' ? exchangeFor : undefined,
         image: image || undefined,
         description: description || undefined
       };
@@ -298,9 +286,9 @@ export const Inventory: React.FC = () => {
 
               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trading Type</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price</span>
                   <p className="text-sm font-bold text-slate-900">
-                    {book.type === 'Sell' ? `$${book.price}` : book.type}
+                    {book.price === 0 ? 'FREE' : `$${book.price}`}
                   </p>
                 </div>
                 <div className="flex space-x-2">
@@ -443,59 +431,25 @@ export const Inventory: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Exchange / Sell option */}
+                {/* Price */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    Offer Type
+                    Price ($) <span className="text-slate-400 lowercase font-normal ml-1">(Enter 0 for Free)</span>
                   </label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value as any)}
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm focus:border-indigo-550 focus:outline-none shadow-sm"
-                  >
-                    <option value="Sell">Sell (For Cash)</option>
-                    <option value="Exchange">Exchange (Swap books)</option>
-                    <option value="Free">Free / Donation</option>
-                  </select>
+                  <input
+                    type="text"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className={`block w-full rounded-lg border ${fieldErrors.price ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-indigo-550'} py-2 px-3 text-sm focus:outline-none shadow-sm`}
+                    required
+                  />
+                  {fieldErrors.price && (
+                    <p className="mt-1.5 text-[11px] font-medium text-rose-600 flex items-center">
+                      <X className="h-3 w-3 mr-1" />
+                      {fieldErrors.price}
+                    </p>
+                  )}
                 </div>
-
-                {/* Dynamic Price or swap targets */}
-                {type === 'Sell' && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Price ($)
-                    </label>
-                    <input
-                      type="text"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      className={`block w-full rounded-lg border ${fieldErrors.price ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-indigo-550'} py-2 px-3 text-sm focus:outline-none shadow-sm`}
-                      required
-                    />
-                    {fieldErrors.price && (
-                      <p className="mt-1.5 text-[11px] font-medium text-rose-600 flex items-center">
-                        <X className="h-3 w-3 mr-1" />
-                        {fieldErrors.price}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {type === 'Exchange' && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                      Looking For (book details)
-                    </label>
-                    <input
-                      type="text"
-                      value={exchangeFor}
-                      onChange={(e) => setExchangeFor(e.target.value)}
-                      className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm focus:border-indigo-550 focus:outline-none shadow-sm"
-                      placeholder="e.g. Chemistry 101 or Linear Algebra"
-                      required
-                    />
-                  </div>
-                )}
 
               </div>
 

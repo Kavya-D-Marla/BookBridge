@@ -28,7 +28,6 @@ const mapNegotiationToRequest = (neg) => {
       title: neg.book_title,
       author: neg.book_author || '',
       price: Number(neg.book_asking_price),
-      type: neg.book_type || 'Sell',
       image: neg.book_image_url || '',
     },
     buyer: {
@@ -43,13 +42,6 @@ const mapNegotiationToRequest = (neg) => {
     },
     status: frontendStatus,
     proposedPrice: neg.latest_offer_price ? Number(neg.latest_offer_price) : undefined,
-    offeredBook: neg.offered_book_id ? {
-      _id: String(neg.offered_book_id),
-      title: neg.offered_book_title || 'Swap book',
-      author: neg.offered_book_author || '',
-      price: 0,
-      type: 'Exchange'
-    } : undefined,
     message: neg.initial_message || '',
     createdAt: neg.created_at,
   };
@@ -82,7 +74,7 @@ const getRequests = async (req, res, next) => {
 const createRequest = async (req, res, next) => {
   try {
     const buyerId = req.user.user_id;
-    const { bookId, message, proposedPrice, offeredBookId } = req.body;
+    const { bookId, message, proposedPrice } = req.body;
     
     let finalPrice = proposedPrice;
     if (finalPrice === undefined || finalPrice === null) {
@@ -94,8 +86,7 @@ const createRequest = async (req, res, next) => {
       buyerId, 
       parseInt(bookId, 10), 
       parseFloat(finalPrice), 
-      message, 
-      offeredBookId ? parseInt(offeredBookId, 10) : null
+      message
     );
 
     const mapped = mapNegotiationToRequest(result.negotiation);

@@ -21,7 +21,7 @@ const wishlistRoutes         = require('./routes/wishlistRoutes');
 const requestRoutes          = require('./routes/requestRoutes');
 const reviewRoutes           = require('./routes/reviewRoutes');
 const notificationRoutes     = require('./routes/notificationRoutes');
-const disputeRoutes          = require('./routes/disputeRoutes');
+
 const adminRoutes            = require('./routes/adminRoutes');
 const userRoutes             = require('./routes/userRoutes');
 const setupSwagger           = require('./config/swagger');
@@ -75,7 +75,7 @@ app.use('/api/wishlist',      wishlistRoutes);
 app.use('/api/requests',      requestRoutes);
 app.use('/api/reviews',       reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/disputes',      disputeRoutes);
+
 app.use('/api/admin',         adminRoutes);
 app.use('/api/users',         userRoutes);
 

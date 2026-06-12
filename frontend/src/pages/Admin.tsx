@@ -3,10 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { 
   Users, 
-  BookOpen, 
+  BookOpen,
   ShieldAlert, 
-  Check, 
-  X, 
   Trash2, 
   Lock, 
   Unlock
@@ -32,20 +30,11 @@ interface BookItem {
   owner: { name: string };
 }
 
-interface DisputeItem {
-  _id: string;
-  title: string;
-  description: string;
-  reportedUser: string;
-  reporter: { name: string };
-  status: 'Pending' | 'Resolved' | 'Dismissed';
-  createdAt: string;
-}
 
 export const Admin: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeSubTab, setActiveSubTab] = useState<'disputes' | 'users' | 'books'>('disputes');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'books'>('users');
 
   // Check admin authorization
   if (user?.role !== 'admin') {
@@ -58,19 +47,6 @@ export const Admin: React.FC = () => {
     );
   }
 
-  // Fetch admin disputes
-  const { data: disputes, isLoading: isDisputesLoading } = useQuery<DisputeItem[]>({
-    queryKey: ['admin-disputes'],
-    queryFn: async () => {
-      try {
-        const response = await api.get('/admin/disputes');
-        return Array.isArray(response.data) ? response.data : (response.data.disputes || []);
-      } catch (err) {
-        console.error(err);
-        throw err;
-      }
-    }
-  });
 
   // Fetch admin users
   const { data: users, isLoading: isUsersLoading } = useQuery<UserItem[]>({
@@ -100,19 +76,6 @@ export const Admin: React.FC = () => {
     }
   });
 
-  // Resolve/Dismiss dispute mutation
-  const resolveDisputeMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: 'Resolved' | 'Dismissed' }) => {
-      return api.patch(`/admin/disputes/${id}`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-disputes'] });
-      alert('Dispute status updated successfully!');
-    },
-    onError: (err: any) => {
-      alert(err.response?.data?.message || 'Failed to update dispute status.');
-    }
-  });
 
   // Toggle user block status mutation
   const blockUserMutation = useMutation({
@@ -150,7 +113,7 @@ export const Admin: React.FC = () => {
           Admin Control Center
         </h1>
         <p className="text-sm text-slate-500">
-          Moderate users, resolve filed disputes, and inspect textbook active inventories
+          Moderate users and inspect textbook active inventories
         </p>
       </div>
 
@@ -176,29 +139,12 @@ export const Admin: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex items-center space-x-4">
-          <div className="h-10 w-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-            <ShieldAlert className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-xs text-slate-400 font-bold uppercase">Open Disputes</span>
-            <p className="text-xl font-extrabold text-slate-900 mt-0.5">
-              {disputes?.filter(d => d.status === 'Pending').length || 0}
-            </p>
-          </div>
-        </div>
+
       </div>
 
       {/* Sub Tabs control */}
       <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveSubTab('disputes')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-            activeSubTab === 'disputes' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-950'
-          }`}
-        >
-          Disputes ({disputes?.filter(d => d.status === 'Pending').length || 0})
-        </button>
+
         <button
           onClick={() => setActiveSubTab('users')}
           className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
@@ -219,54 +165,6 @@ export const Admin: React.FC = () => {
 
       {/* Core Panels */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm min-h-[40vh]">
-        {/* Disputes Dashboard */}
-        {activeSubTab === 'disputes' && (
-          <div className="space-y-4">
-            <h3 className="font-display text-base font-bold text-slate-900 border-b pb-3 mb-4">Pending Dispute Reports</h3>
-            {isDisputesLoading ? (
-              <div className="text-center text-xs text-slate-400 py-6">Loading disputes...</div>
-            ) : disputes?.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400">No disputes reported. Workspace is clean!</div>
-            ) : (
-              disputes?.map((disp) => (
-                <div key={disp._id} className="p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col md:flex-row justify-between gap-4">
-                  <div className="space-y-2 max-w-2xl">
-                    <div className="flex items-center space-x-2 text-xs font-semibold">
-                      <span className="bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded text-[10px]">
-                        {disp.status}
-                      </span>
-                      <span className="text-slate-400">Reported: {new Date(disp.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <h4 className="font-display font-bold text-slate-900 text-sm">{disp.title}</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed font-normal">"{disp.description}"</p>
-                    <div className="text-[10px] text-slate-400 pt-1 font-semibold space-x-3">
-                      <span>Reporter: <strong className="text-slate-600">{disp.reporter.name}</strong></span>
-                      <span>&bull;</span>
-                      <span>Accused: <strong className="text-slate-600">{disp.reportedUser}</strong></span>
-                    </div>
-                  </div>
-
-                  {disp.status === 'Pending' && (
-                    <div className="flex md:flex-col gap-2 items-center self-center justify-end">
-                      <button
-                        onClick={() => resolveDisputeMutation.mutate({ id: disp._id, status: 'Resolved' })}
-                        className="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-[10px] font-bold hover:bg-emerald-600 transition"
-                      >
-                        <Check className="h-3 w-3 mr-1" /> Mark Resolved
-                      </button>
-                      <button
-                        onClick={() => resolveDisputeMutation.mutate({ id: disp._id, status: 'Dismissed' })}
-                        className="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-[10px] font-bold hover:bg-slate-250 transition"
-                      >
-                        <X className="h-3 w-3 mr-1" /> Dismiss
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
 
         {/* Users Moderator Board */}
         {activeSubTab === 'users' && (
@@ -353,7 +251,7 @@ export const Admin: React.FC = () => {
                         <td className="py-3 pr-4">{b.category}</td>
                         <td className="py-3 pr-4">{b.owner.name}</td>
                         <td className="py-3 pr-4 font-semibold">
-                          {b.type === 'Sell' ? `$${b.price}` : b.type}
+                          {b.price === 0 ? 'FREE' : `$${b.price}`}
                         </td>
                         <td className="py-3 text-right">
                           <button

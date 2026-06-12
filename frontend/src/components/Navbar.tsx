@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  BookOpen, 
+  BookOpen,
   Bell, 
   MessageSquare, 
   Heart, 
@@ -87,9 +87,9 @@ export const Navbar: React.FC = () => {
         <div className="flex h-16 justify-between items-center">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 transition">
-              <BookOpen className="h-8 w-8 stroke-[2.5]" />
-              <span className="font-display text-2xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent">
+            <Link to="/" className="flex items-center space-x-2 transition opacity-90 hover:opacity-100">
+              <img src="/logo.png" alt="BookBridge Logo" className="h-10 w-auto object-contain mix-blend-multiply scale-125 origin-left" />
+              <span className="font-display text-2xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent ml-2">
                 BookBridge
               </span>
             </Link>

@@ -88,13 +88,6 @@ const getNegotiationDetails = async (req, res, next) => {
       },
       message: row.message || '',
       proposedPrice: Number(row.offered_price),
-      offeredBook: result.negotiation.offered_book_id && row.made_by === 'buyer' ? {
-        _id: String(result.negotiation.offered_book_id),
-        title: result.negotiation.offered_book_title || 'Swap book',
-        author: result.negotiation.offered_book_author || '',
-        price: 0,
-        type: 'Exchange'
-      } : undefined,
       createdAt: row.timestamp,
     }));
 
